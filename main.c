@@ -7,8 +7,13 @@
 #define MAX_CARDS_OLD 5
 #define MAX_ACCOUNTS 5
 #define MAX_TRANS 100
+#define MAX_CUSTOMERS 100
 
-// Eli
+// ============================================================================
+// 1. STRUKTURLAR (Bütün Modulların Strukturları Qorunub)
+// ============================================================================
+
+// --- Əlinin Modulunun Strukturları ---
 typedef struct {
     char type[20];
     double amount;
@@ -23,7 +28,7 @@ typedef struct {
     int trans_count;
 } Account;
 
-
+// --- Yeni Kart Modulunun Strukturları ---
 struct Card {
     int id;
     char card_number[17];
@@ -39,7 +44,7 @@ struct CardList {
     int next_id;
 };
 
-// Aygul
+// --- Qeydiyyat/Giriş Modulunun Strukturu ---
 struct user {
     char name[50];
     char surname[50];
@@ -52,7 +57,7 @@ struct user {
     float balance;
 };
 
-// Leyla
+// --- Leylanın Modulunun Strukturları ---
 struct OldCard {
     char card_number[17];
     int is_blocked;
@@ -65,8 +70,26 @@ struct BankAccount {
     int card_count;
 };
 
+// --- Yeni Müştəri Modulunun Strukturları ---
+struct Customer {
+    int id;
+    char full_name[60];
+    char phone[15];
+    char email[50];
+    char address[100];
+    int is_active;
+};
+
+struct CustomerList {
+    struct Customer customers[MAX_CUSTOMERS];
+    int count;
+    int next_id;
+};
 
 
+// ============================================================================
+// 2. KÖMƏKÇİ VƏ FAYL FUNKSİYALARI
+// ============================================================================
 
 void clear_buffer() {
     int c;
@@ -79,7 +102,7 @@ void get_date(char *buf) {
     strftime(buf, 20, "%d.%m.%Y", tm);
 }
 
-
+// Yeni Kart Modulunun Fayl Funksiyaları
 void save_to_file(struct CardList *list) {
     FILE *file = fopen("cards.dat", "wb");
     if (file != NULL) {
@@ -106,8 +129,37 @@ void load_from_file(struct CardList *list) {
     fclose(file);
 }
 
+// Müştəri Modulunun Fayl Funksiyaları
+void save_customers_to_file(struct CustomerList *list) {
+    FILE *file = fopen("customers.dat", "wb");
+    if (file != NULL) {
+        fwrite(&list->count, sizeof(int), 1, file);
+        fwrite(&list->next_id, sizeof(int), 1, file);
+        fwrite(list->customers, sizeof(struct Customer), list->count, file);
+        fclose(file);
+    }
+}
 
-// Eli
+void load_customers_from_file(struct CustomerList *list) {
+    FILE *file = fopen("customers.dat", "rb");
+    if (file == NULL) {
+        list->count   = 0;
+        list->next_id = 1;
+        struct Customer test_cust = {list->next_id++, "Ali Asadzada", "+994554740818", "eliesedzade21e@mail.com", "Baku, Azerbaijan", 1};
+        list->customers[0] = test_cust;
+        list->count = 1;
+        return;
+    }
+    fread(&list->count, sizeof(int), 1, file);
+    fread(&list->next_id, sizeof(int), 1, file);
+    fread(list->customers, sizeof(struct Customer), list->count, file);
+    fclose(file);
+}
+
+
+// ============================================================================
+// 3. YENİ GƏTİRDİYİN KART MODULUNUN FUNKSİYALARI
+// ============================================================================
 
 void add_card(struct CardList *list) {
     if (list->count >= MAX_CARDS_NEW) {
@@ -272,7 +324,9 @@ void manage_balance(struct CardList *list) {
 }
 
 
-// 4. LEYLA
+// ============================================================================
+// 4. LEYLANIN HESAB MODULUNUN FUNKSİYALARI
+// ============================================================================
 
 int find_account(struct BankAccount accounts[], int account_count, const char *num) {
     for (int i = 0; i < account_count; i++) {
@@ -383,8 +437,9 @@ void block_card(struct BankAccount accounts[], int account_count) {
 }
 
 
-
-// Eli
+// ============================================================================
+// 5. ƏLİNİN BALANS VƏ TARİXÇƏ MODULUNUN FUNKSİYALARI
+// ============================================================================
 
 void save_transaction(Account *acc, char *type, double amount) {
     if (acc->trans_count >= MAX_TRANS) return;
@@ -437,12 +492,221 @@ void withdraw(Account *acc, double amount) {
 }
 
 
+// ============================================================================
+// 6. YENİ GƏTİRDİYİN MÜŞTƏRİ MODULUNUN FUNKSİYALARI
+// ============================================================================
 
+void add_customer(struct CustomerList *list) {
+    if (list->count >= MAX_CUSTOMERS) {
+        printf("[X] Customer list is full! Cannot add more customers.\n");
+        return;
+    }
+
+    struct Customer new_customer;
+    new_customer.id = list->next_id++;
+
+    printf("\n--- Adding Customer (ID: %d) ---\n", new_customer.id);
+
+    printf("Enter full name   : ");
+    fgets(new_customer.full_name, sizeof(new_customer.full_name), stdin);
+    new_customer.full_name[strcspn(new_customer.full_name, "\n")] = 0;
+
+    printf("Enter phone number: ");
+    scanf("%14s", new_customer.phone);
+    clear_buffer();
+
+    printf("Enter email       : ");
+    scanf("%49s", new_customer.email);
+    clear_buffer();
+
+    printf("Enter address     : ");
+    fgets(new_customer.address, sizeof(new_customer.address), stdin);
+    new_customer.address[strcspn(new_customer.address, "\n")] = 0;
+
+    new_customer.is_active = 1;
+    list->customers[list->count] = new_customer;
+    list->count++;
+
+    printf("[OK] Customer added successfully! (ID: %d)\n", new_customer.id);
+}
+
+void display_all_customers(struct CustomerList *list) {
+    if (list->count == 0) {
+        printf("\nNo customers in the list yet.\n");
+        return;
+    }
+
+    printf("\n========== CUSTOMER LIST ==========\n");
+    for (int i = 0; i < list->count; i++) {
+        struct Customer c = list->customers[i];
+        printf("\n--- Customer %d ---\n",  i + 1);
+        printf("ID       : %d\n",          c.id);
+        printf("Name     : %s\n",          c.full_name);
+        printf("Phone    : %s\n",          c.phone);
+        printf("Email    : %s\n",          c.email);
+        printf("Address  : %s\n",          c.address);
+        printf("Status   : %s\n",          c.is_active ? "Active" : "Closed");
+    }
+    printf("\n===================================\n");
+}
+
+void search_customer_by_id(struct CustomerList *list) {
+    int search_id;
+    printf("Enter customer ID to search: ");
+    if (scanf("%d", &search_id) != 1) {
+        printf("[X] Invalid ID format!\n");
+        clear_buffer();
+        return;
+    }
+    clear_buffer();
+
+    for (int i = 0; i < list->count; i++) {
+        if (list->customers[i].id == search_id) {
+            struct Customer c = list->customers[i];
+            printf("\n--- Customer Found ---\n");
+            printf("ID       : %d\n",  c.id);
+            printf("Name     : %s\n",  c.full_name);
+            printf("Phone    : %s\n",  c.phone);
+            printf("Email    : %s\n",  c.email);
+            printf("Address  : %s\n",  c.address);
+            printf("Status   : %s\n",  c.is_active ? "Active" : "Closed");
+            return;
+        }
+    }
+    printf("[X] Customer with ID %d not found!\n", search_id);
+}
+
+void search_customer_by_name(struct CustomerList *list) {
+    char search_name[60];
+    printf("Enter name to search: ");
+    fgets(search_name, sizeof(search_name), stdin);
+    search_name[strcspn(search_name, "\n")] = 0;
+
+    int found = 0;
+    for (int i = 0; i < list->count; i++) {
+        if (strstr(list->customers[i].full_name, search_name) != NULL) {
+            struct Customer c = list->customers[i];
+            printf("\n--- Match Found ---\n");
+            printf("ID       : %d\n",  c.id);
+            printf("Name     : %s\n",  c.full_name);
+            printf("Phone    : %s\n",  c.phone);
+            printf("Email    : %s\n",  c.email);
+            printf("Address  : %s\n",  c.address);
+            printf("Status   : %s\n",  c.is_active ? "Active" : "Closed");
+            found = 1;
+        }
+    }
+    if (found == 0) {
+        printf("[X] No customer found with that name.\n");
+    }
+}
+
+void update_customer(struct CustomerList *list) {
+    int search_id;
+    printf("Enter customer ID to update: ");
+    if (scanf("%d", &search_id) != 1) {
+        printf("[X] Invalid ID format!\n");
+        clear_buffer();
+        return;
+    }
+    clear_buffer();
+
+    for (int i = 0; i < list->count; i++) {
+        if (list->customers[i].id == search_id) {
+            printf("\nWhat do you want to update?\n");
+            printf("1. Phone number\n");
+            printf("2. Email\n");
+            printf("3. Address\n");
+            printf("Your choice: ");
+
+            int choice;
+            if (scanf("%d", &choice) != 1) {
+                printf("[X] Invalid choice.\n");
+                clear_buffer();
+                return;
+            }
+            clear_buffer();
+
+            if (choice == 1) {
+                printf("Enter new phone number: ");
+                scanf("%14s", list->customers[i].phone);
+                clear_buffer();
+                printf("[OK] Phone updated!\n");
+            } else if (choice == 2) {
+                printf("Enter new email: ");
+                scanf("%49s", list->customers[i].email);
+                clear_buffer();
+                printf("[OK] Email updated!\n");
+            } else if (choice == 3) {
+                printf("Enter new address: ");
+                fgets(list->customers[i].address, sizeof(list->customers[i].address), stdin);
+                list->customers[i].address[strcspn(list->customers[i].address, "\n")] = 0;
+                printf("[OK] Address updated!\n");
+            } else {
+                printf("[X] Invalid choice.\n");
+            }
+            return;
+        }
+    }
+    printf("[X] Customer with ID %d not found!\n", search_id);
+}
+
+void toggle_customer_status(struct CustomerList *list) {
+    int search_id;
+    printf("Enter customer ID to close/reopen account: ");
+    if (scanf("%d", &search_id) != 1) {
+        printf("[X] Invalid ID format!\n");
+        clear_buffer();
+        return;
+    }
+    clear_buffer();
+
+    for (int i = 0; i < list->count; i++) {
+        if (list->customers[i].id == search_id) {
+            list->customers[i].is_active = !list->customers[i].is_active;
+            printf("[OK] Account status is now: %s\n",
+                   list->customers[i].is_active ? "Active" : "Closed");
+            return;
+        }
+    }
+    printf("[X] Customer with ID %d not found!\n", search_id);
+}
+
+void delete_customer(struct CustomerList *list) {
+    int search_id;
+    printf("Enter customer ID to delete: ");
+    if (scanf("%d", &search_id) != 1) {
+        printf("[X] Invalid ID format!\n");
+        clear_buffer();
+        return;
+    }
+    clear_buffer();
+
+    for (int i = 0; i < list->count; i++) {
+        if (list->customers[i].id == search_id) {
+            for (int j = i; j < list->count - 1; j++) {
+                list->customers[j] = list->customers[j + 1];
+            }
+            list->count--;
+            printf("[OK] Customer deleted successfully!\n");
+            return;
+        }
+    }
+    printf("[X] Customer with ID %d not found!\n", search_id);
+}
+
+
+// ============================================================================
+// 7. YENİLƏNMİŞ ANA MENYÜ (5 SİSTEM BİR YERDƏ)
+// ============================================================================
 
 int main() {
+    // Bütün modulların məlumat bazaları fayllardan yüklənir
+    struct CardList card_list;
+    load_from_file(&card_list);
 
-    struct CardList list;
-    load_from_file(&list);
+    struct CustomerList cust_list;
+    load_customers_from_file(&cust_list);
 
     struct user usr;
     FILE *fp;
@@ -450,11 +714,11 @@ int main() {
     struct BankAccount bank_accounts[MAX_ACCOUNTS];
     int total_accounts = 0;
 
-    Account acc;
-    strcpy(acc.name, "Eli Memmedov");
-    strcpy(acc.id, "AZ001");
-    acc.balance = 0.0;
-    acc.trans_count = 0;
+    Account eli_acc;
+    strcpy(eli_acc.name, "Eli Memmedov");
+    strcpy(eli_acc.id, "AZ001");
+    eli_acc.balance = 0.0;
+    eli_acc.trans_count = 0;
 
     int main_choice;
     int opt;
@@ -462,15 +726,16 @@ int main() {
 
     while (1) {
         printf("\n==============================================\n");
-        printf("          OMNI BANKING INTEGRATED SYSTEM      \n");
+        printf("         SUPREME BANKING INTEGRATED SUITE      \n");
         printf("==============================================\n");
         printf("1. USER AUTHENTICATION SYSTEM (Register/Login)\n");
-        printf("2. ACCOUNT MANAGEMENT SYSTEM\n");
-        printf("3. ADVANCED CARD MANAGEMENT SYSTEM (New Card Module)\n");
-        printf("4. GLOBAL ACCOUNT OPERATION SYSTEM \n");
+        printf("2. ACCOUNT MANAGEMENT SYSTEM (Leyla's Module)\n");
+        printf("3. ADVANCED CARD SYSTEM (New Card Module)\n");
+        printf("4. GLOBAL ACCOUNT OPERATION SYSTEM (Eli's Module)\n");
+        printf("5. CUSTOMER INFORMATION SYSTEM (New Customer Module)\n");
         printf("0. SAVE & EXIT SYSTEM\n");
         printf("==============================================\n");
-        printf("Ana menyudan sistem secin: ");
+        printf("Ana menyudan idareetme sistemini secin: ");
 
         if (scanf("%d", &main_choice) != 1) {
             printf("[X] Yanlis secim! Reqem daxil edin.\n");
@@ -480,13 +745,15 @@ int main() {
         clear_buffer();
 
         if (main_choice == 0) {
-            save_to_file(&list);
-            printf("Yeni kart melumatlari 'cards.dat' faylina yazildi. Cixis edilir. Bye!\n");
+            // Hər iki datanı fayla qeyd edib çıxırıq
+            save_to_file(&card_list);
+            save_customers_to_file(&cust_list);
+            printf("Butun melumatlar ('cards.dat' ve 'customers.dat') yadda saxlanildi. Ugurlar!\n");
             break;
         }
 
         switch (main_choice) {
-            case 1: // Aygul
+            case 1: // --- Qeydiyyat / Giriş Modulu ---
                 printf("\n--- AUTHENTICATION SUB-MENU ---");
                 printf("\n1. Register an account");
                 printf("\n2. Login");
@@ -542,23 +809,23 @@ int main() {
                 }
                 break;
 
-            case 2: // Leyla
+            case 2: // --- Leylanın Hesab Modulu ---
                 printf("\n--- ACCOUNT MANAGEMENT SUB-MENU (Aktiv: %d) ---\n", total_accounts);
                 printf("1. Create Bank Account\n");
                 printf("2. Create Card\n");
                 printf("3. Block Card\n");
                 printf("Secim edin: ");
-                int choice;
-                if (scanf("%d", &choice) != 1) { clear_buffer(); break; }
+                int leyla_choice;
+                if (scanf("%d", &leyla_choice) != 1) { clear_buffer(); break; }
                 clear_buffer();
 
-                if (choice == 1) create_bank_account(bank_accounts, &total_accounts);
-                else if (choice == 2) create_card(bank_accounts, total_accounts);
-                else if (choice == 3) block_card(bank_accounts, total_accounts);
+                if (leyla_choice == 1) create_bank_account(bank_accounts, &total_accounts);
+                else if (leyla_choice == 2) create_card(bank_accounts, total_accounts);
+                else if (leyla_choice == 3) block_card(bank_accounts, total_accounts);
                 else printf("Yanlis alt-secim!\n");
                 break;
 
-            case 3: //
+            case 3: // --- Advanced Card Modulu ---
                 printf("\n--- ADVANCED CARD SUB-MENU ---\n");
                 printf("1. Add Card\n");
                 printf("2. Display All Cards\n");
@@ -572,17 +839,17 @@ int main() {
                 clear_buffer();
 
                 switch (card_choice) {
-                    case 1: add_card(&list); break;
-                    case 2: display_all_cards(&list); break;
-                    case 3: search_card(&list); break;
-                    case 4: toggle_card_status(&list); break;
-                    case 5: delete_card(&list); break;
-                    case 6: manage_balance(&list); break;
+                    case 1: add_card(&card_list); break;
+                    case 2: display_all_cards(&card_list); break;
+                    case 3: search_card(&card_list); break;
+                    case 4: toggle_card_status(&card_list); break;
+                    case 5: delete_card(&card_list); break;
+                    case 6: manage_balance(&card_list); break;
                     default: printf("[X] Invalid sub-choice.\n");
                 }
                 break;
 
-            case 4: // Eli
+            case 4: // --- Əlinin Balans/Tarixçə Modulu ---
                 printf("\n--- GLOBAL ACCOUNT TRANSACTION SUB-MENU ---\n");
                 printf("1. Deposit\n");
                 printf("2. Withdraw\n");
@@ -597,21 +864,47 @@ int main() {
                     case 1:
                         printf("Mebleg: ");
                         scanf("%lf", &amount);
-                        deposit(&acc, amount);
+                        deposit(&eli_acc, amount);
                         break;
                     case 2:
                         printf("Mebleg: ");
                         scanf("%lf", &amount);
-                        withdraw(&acc, amount);
+                        withdraw(&eli_acc, amount);
                         break;
-                    case 3: show_balance(&acc); break;
-                    case 4: show_history(&acc); break;
+                    case 3: show_balance(&eli_acc); break;
+                    case 4: show_history(&eli_acc); break;
                     default: printf("Yanlis alt-secim!\n");
                 }
                 break;
 
+            case 5: // --- Yeni Müştəri Modulu ---
+                printf("\n--- CUSTOMER INFORMATION SUB-MENU ---\n");
+                printf("1. Add Customer\n");
+                printf("2. Display All Customers\n");
+                printf("3. Search by ID\n");
+                printf("4. Search by Name\n");
+                printf("5. Update Customer Info\n");
+                printf("6. Close / Reopen Account\n");
+                printf("7. Delete Customer\n");
+                printf("Your choice: ");
+                int cust_choice;
+                if (scanf("%d", &cust_choice) != 1) { clear_buffer(); break; }
+                clear_buffer();
+
+                switch (cust_choice) {
+                    case 1: add_customer(&cust_list); break;
+                    case 2: display_all_customers(&cust_list); break;
+                    case 3: search_customer_by_id(&cust_list); break;
+                    case 4: search_customer_by_name(&cust_list); break;
+                    case 5: update_customer(&cust_list); break;
+                    case 6: toggle_customer_status(&cust_list); break;
+                    case 7: delete_customer(&cust_list); break;
+                    default: printf("[X] Invalid sub-choice.\n");
+                }
+                break;
+
             default:
-                printf("[X] Yanlis ana secim! Siyahidaki bölmələri daxil edin.\n");
+                printf("[X] Yanlis ana secim! Siyahidaki reqemleri daxil edin.\n");
         }
     }
     return 0;
