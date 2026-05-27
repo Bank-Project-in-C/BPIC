@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
+#include<stdlib.h>
 
-#define MAX_TRANS 100
-
+struct user {
 typedef struct {
     char type[20];
     double amount;
@@ -12,6 +11,15 @@ typedef struct {
 
 typedef struct {
     char name[50];
+    char surname[50];
+    char birth[50];
+    char FIN[50];
+    char phone[50];
+    char email[50];
+    char account_id[50];
+    char password[50];
+    float balance;
+};
     char id[10];
     double balance;
     Transaction history[MAX_TRANS];
@@ -77,15 +85,81 @@ void withdraw(Account *acc, double amount) {
 }
 
 int main() {
+    struct user usr;
+    FILE *fp;
+    char entered_pass[50];
+    char phone[50];
+    int opt;
     Account acc;
     strcpy(acc.name, "Eli Memmedov");
     strcpy(acc.id, "AZ001");
     acc.balance = 0.0;
     acc.trans_count = 0;
 
+    printf("\nWhat do you want to do?");
+    printf("\n\n1. Register an account");
+    printf("\n2. Login");
+    printf("\n\n Your choice:\t");
+    scanf("%d",&opt);
     int choice;
     double amount;
 
+    if(opt==1) {
+        system("cls");
+        fflush(stdout);
+        printf("Enter your name:\t");
+        scanf("%s",usr.name);
+        printf("Enter your surname:\t");
+        scanf("%s",usr.surname);
+        printf("Enter your birth:\t");
+        scanf("%s",usr.birth);
+        printf("Enter your FIN:\t");
+        scanf("%s",usr.FIN);
+        printf("Enter your phone number:\t");
+        scanf("%s",usr.phone);
+        printf("Enter your email:\t");
+        scanf("%s",usr.email);
+        printf("Enter new password:\t");
+        scanf("%s",usr.password);
+        usr.balance=0;
+        strcpy(usr.name,usr.phone);
+        fp=fopen(strcat(usr.name,".dat"),"w");
+        fwrite(&usr,sizeof(struct user),1,fp);
+        if (fwrite!=0){
+            printf("\n\nAccount successfully registered");
+            fclose(fp);
+        }
+        else {
+            printf("\n\nAccount not registered");
+        }
+    }
+        if (opt==2) {
+            system("cls");
+            while (getchar()!='\n');
+            char filename[50];
+            char entered_pass[50];
+            printf("\nEnter your phone number/email/ID:\t");
+            scanf("%s",filename);
+            printf("Password:\t");
+            scanf("%s",entered_pass);
+            strcat(filename,".dat");
+            fp=fopen(filename,"r");
+            if (fp==NULL) {
+                printf("\n\nAccount not found");
+            }
+            else {
+                fread(&usr,sizeof(struct user),1,fp);
+                fclose(fp);
+            }
+            if (!strcmp(entered_pass,usr.password)) {
+                printf("\nPassword matched");
+                }
+            }
+            else {
+                printf("\nInvalid password");
+            }
+        }
+    return 0;
     while (1) {
         printf("\n=== BANK MENYU ===\n");
         printf("1. Deposit\n");
